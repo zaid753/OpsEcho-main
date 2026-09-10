@@ -39,8 +39,8 @@ export default function JoinPage() {
         className="w-full max-w-md"
       >
         <div className="text-center mb-10">
-          <div className="w-16 h-16 bg-blue-600 rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-2xl shadow-blue-600/20">
-            <Zap className="w-8 h-8 text-white fill-white" />
+          <div className="w-16 h-16 bg-gradient-to-br from-accent to-purple-600 rounded-2xl flex items-center justify-center mb-6 shadow-xl shadow-accent/20 mx-auto">
+            <img src="/logo.png" alt="OpsEcho Logo" className="w-full h-full object-contain" />
           </div>
           <h1 className="text-3xl font-bold mb-2 tracking-tight">Join Response Room</h1>
           <p className="text-text-muted dark:text-text-muted">Enter a unique incident code to coordinate with the team.</p>

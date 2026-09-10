@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { Zap, Mail, Lock, Loader2, AlertCircle, User, Briefcase, ArrowLeft } from "lucide-react";
+import { Mail, Lock, Loader2, AlertCircle, User, Briefcase, ArrowLeft } from "lucide-react";
+import { motion } from "motion/react";
 import client from "../api/client";
 import { useAuth } from "../context/AuthContext";
 import { Role } from "../types";
@@ -38,11 +39,16 @@ export default function RegisterPage() {
         Back to Home
       </Link>
 
-      <div className="w-full max-w-lg">
+      <motion.div 
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5, ease: "easeOut" }}
+        className="w-full max-w-lg"
+      >
         <div className="text-center mb-8">
           <Link to="/" className="inline-flex items-center gap-2 mb-6">
-            <div className="w-10 h-10 bg-blue-600 rounded-xl flex items-center justify-center shadow-lg shadow-blue-500/20">
-              <Zap className="w-6 h-6 fill-white" />
+            <div className="w-12 h-12 flex items-center justify-center">
+              <img src="/logo.png" alt="OpsEcho Logo" className="w-full h-full object-contain" />
             </div>
             <span className="text-2xl font-bold tracking-tight">OpsEcho</span>
           </Link>
@@ -141,7 +147,7 @@ export default function RegisterPage() {
             </Link>
           </p>
         </div>
-      </div>
+      </motion.div>
     </div>
   );
 }

@@ -6,6 +6,19 @@ import { motion, AnimatePresence } from "motion/react";
 import { useLocation } from "react-router-dom";
 import { clsx } from "clsx";
 
+const containerVariants = {
+  hidden: { opacity: 0 },
+  show: {
+    opacity: 1,
+    transition: { staggerChildren: 0.1 }
+  }
+};
+
+const itemVariants = {
+  hidden: { opacity: 0, y: 20 },
+  show: { opacity: 1, y: 0, transition: { type: "spring", stiffness: 300, damping: 24 } }
+};
+
 export default function SettingsPage() {
   const { user } = useAuth();
   const { theme, setTheme } = useTheme();
@@ -315,9 +328,14 @@ export default function SettingsPage() {
                     <p className="text-xs text-text-muted">Connect third-party tools to sync alerts and incidents.</p>
                   </div>
 
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <motion.div 
+                    variants={containerVariants}
+                    initial="hidden"
+                    animate="show"
+                    className="grid grid-cols-1 md:grid-cols-2 gap-6"
+                  >
                     {/* Slack Integration Card */}
-                    <div className="group relative p-6 bg-bg-surface dark:bg-bg-surface/40 backdrop-blur-xl border border-border-subtle dark:border-border-subtle hover:border-purple-500/50 dark:hover:border-purple-500/50 rounded-2xl transition-all duration-300 shadow-sm hover:shadow-xl hover:shadow-purple-500/10 flex flex-col justify-between overflow-hidden">
+                    <motion.div variants={itemVariants} className="group relative p-6 bg-bg-surface dark:bg-bg-surface/40 backdrop-blur-xl border border-border-subtle dark:border-border-subtle hover:border-purple-500/50 dark:hover:border-purple-500/50 rounded-2xl transition-all duration-300 shadow-sm hover:shadow-xl hover:shadow-purple-500/10 flex flex-col justify-between overflow-hidden">
                       <div className="absolute top-0 right-0 w-32 h-32 bg-purple-500/10 blur-3xl rounded-full -translate-y-1/2 translate-x-1/3 group-hover:scale-150 transition-transform duration-700 pointer-events-none"></div>
                       <div className="relative z-10">
                         <div className="flex items-start justify-between mb-6">
@@ -350,10 +368,10 @@ export default function SettingsPage() {
                           </button>
                         )}
                       </div>
-                    </div>
+                    </motion.div>
 
                     {/* Jira Integration Card */}
-                    <div className="group relative p-6 bg-bg-surface dark:bg-bg-surface/40 backdrop-blur-xl border border-border-subtle dark:border-border-subtle hover:border-blue-500/50 dark:hover:border-blue-500/50 rounded-2xl transition-all duration-300 shadow-sm hover:shadow-xl hover:shadow-blue-500/10 flex flex-col justify-between overflow-hidden">
+                    <motion.div variants={itemVariants} className="group relative p-6 bg-bg-surface dark:bg-bg-surface/40 backdrop-blur-xl border border-border-subtle dark:border-border-subtle hover:border-blue-500/50 dark:hover:border-blue-500/50 rounded-2xl transition-all duration-300 shadow-sm hover:shadow-xl hover:shadow-blue-500/10 flex flex-col justify-between overflow-hidden">
                       <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500/10 blur-3xl rounded-full -translate-y-1/2 translate-x-1/3 group-hover:scale-150 transition-transform duration-700 pointer-events-none"></div>
                       <div className="relative z-10">
                         <div className="flex items-start justify-between mb-6">
@@ -386,8 +404,8 @@ export default function SettingsPage() {
                           </button>
                         )}
                       </div>
-                    </div>
-                  </div>
+                    </motion.div>
+                  </motion.div>
                 </motion.div>
               )}
             </AnimatePresence>

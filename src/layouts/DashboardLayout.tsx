@@ -4,7 +4,21 @@ import { Zap, LayoutDashboard, History, Settings, LogOut, PlusCircle, UserCircle
 import { useAuth } from "../context/AuthContext";
 import { useTheme } from "../context/ThemeContext";
 import BackButton from "../components/BackButton";
+import { motion } from "motion/react";
 import { clsx, type ClassValue } from "clsx";
+
+const sidebarVariants = {
+  hidden: { opacity: 0 },
+  show: {
+    opacity: 1,
+    transition: { staggerChildren: 0.1 }
+  }
+};
+
+const navItemVariants = {
+  hidden: { opacity: 0, x: -20 },
+  show: { opacity: 1, x: 0, transition: { type: "spring", stiffness: 300, damping: 24 } }
+};
 import { twMerge } from "tailwind-merge";
 
 function cn(...inputs: ClassValue[]) {
@@ -51,7 +65,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       )}>
         <div className="p-6 md:p-4 lg:p-6 flex items-center justify-between md:justify-center lg:justify-between">
           <Link to="/" className="flex items-center gap-2" onClick={() => setIsMobileMenuOpen(false)}>
-            <Zap className="w-6 h-6 shrink-0 text-accent fill-blue-600" />
+            <div className="w-8 h-8 flex items-center justify-center shrink-0">
+              <img src="/logo.png" alt="OpsEcho Logo" className="w-full h-full object-contain" />
+            </div>
             <span className="text-xl font-bold tracking-tight block md:hidden lg:block">OpsEcho</span>
           </Link>
           <button 
@@ -62,24 +78,30 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           </button>
         </div>
 
-        <nav className="flex-1 px-4 md:px-2 lg:px-4 space-y-1">
+        <motion.nav 
+          variants={sidebarVariants}
+          initial="hidden"
+          animate="show"
+          className="flex-1 px-4 md:px-2 lg:px-4 space-y-1"
+        >
           {navItems.map((item) => (
-            <Link
-              key={item.path}
-              to={item.path}
-              title={item.label}
-              className={cn(
-                "group flex items-center gap-3 md:justify-center lg:justify-start px-4 md:px-0 lg:px-4 py-3 rounded-xl transition-all duration-300 text-sm font-bold",
-                location.pathname === item.path
-                  ? "bg-blue-50 dark:bg-blue-500/10 text-blue-700 dark:text-accent border border-blue-200 dark:border-blue-500/20 shadow-[0_0_15px_rgba(59,130,246,0.1)] dark:shadow-[0_0_15px_rgba(59,130,246,0.05)]"
-                  : "text-text-muted dark:text-text-muted hover:text-text-primary dark:hover:text-white hover:bg-bg-surface dark:hover:bg-bg-surface/5 border border-transparent"
-              )}
-            >
-              <item.icon className={cn("w-5 h-5 shrink-0 transition-transform duration-300", location.pathname === item.path ? "scale-110" : "group-hover:scale-110 group-hover:text-text-primary dark:group-hover:text-white")} />
-              <span className="block md:hidden lg:block whitespace-nowrap">{item.label}</span>
-            </Link>
+            <motion.div key={item.path} variants={navItemVariants}>
+              <Link
+                to={item.path}
+                title={item.label}
+                className={cn(
+                  "group flex items-center gap-3 md:justify-center lg:justify-start px-4 md:px-0 lg:px-4 py-3 rounded-xl transition-all duration-300 text-sm font-bold",
+                  location.pathname === item.path
+                    ? "bg-blue-50 dark:bg-blue-500/10 text-blue-700 dark:text-accent border border-blue-200 dark:border-blue-500/20 shadow-[0_0_15px_rgba(59,130,246,0.1)] dark:shadow-[0_0_15px_rgba(59,130,246,0.05)]"
+                    : "text-text-muted dark:text-text-muted hover:text-text-primary dark:hover:text-white hover:bg-bg-surface dark:hover:bg-bg-surface/5 border border-transparent"
+                )}
+              >
+                <item.icon className={cn("w-5 h-5 shrink-0 transition-transform duration-300", location.pathname === item.path ? "scale-110" : "group-hover:scale-110 group-hover:text-text-primary dark:group-hover:text-white")} />
+                <span className="block md:hidden lg:block whitespace-nowrap">{item.label}</span>
+              </Link>
+            </motion.div>
           ))}
-        </nav>
+        </motion.nav>
 
         <div className="p-4 md:p-2 lg:p-4 border-t border-border-subtle dark:border-border-subtle">
           <Link to="/settings?tab=profile" className="flex items-center gap-3 md:justify-center lg:justify-start px-4 md:px-0 lg:px-4 py-3 bg-bg-surface dark:bg-bg-surface/50 rounded-2xl md:rounded-xl lg:rounded-2xl border border-border-subtle dark:border-border-subtle mb-4 hover:bg-border-subtle/50 dark:hover:bg-bg-surface/80 transition-colors cursor-pointer group">
