@@ -1,17 +1,11 @@
 import React, { useEffect, useRef } from 'react';
+import { Mic, MicOff } from 'lucide-react';
 
 interface AudioVisualizerProps {
   stream: MediaStream | null;
   isActive: boolean;
 }
 
-/**
- * AudioVisualizer
- *
- * Renders a fixed-position waveform bar animation at the bottom-center
- * of the screen when the user is actively speaking (isActive=true & stream set).
- * Uses the Web Audio AnalyserNode to read frequency data from the mic stream.
- */
 const AudioVisualizer: React.FC<AudioVisualizerProps> = ({ stream, isActive }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const audioContextRef = useRef<AudioContext | null>(null);
@@ -22,7 +16,6 @@ const AudioVisualizer: React.FC<AudioVisualizerProps> = ({ stream, isActive }) =
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas || !isActive || !stream) {
-      // Stop animation when inactive
       if (animFrameRef.current) {
         cancelAnimationFrame(animFrameRef.current);
         animFrameRef.current = null;
@@ -32,25 +25,22 @@ const AudioVisualizer: React.FC<AudioVisualizerProps> = ({ stream, isActive }) =
       return;
     }
 
-    // Create AudioContext once
     if (!audioContextRef.current || audioContextRef.current.state === 'closed') {
       audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
     }
     const audioCtx = audioContextRef.current;
 
-    // Resume suspended context (browser policy)
     if (audioCtx.state === 'suspended') {
       audioCtx.resume();
     }
 
-    // Clean up old source before creating a new one
     if (sourceRef.current) {
       sourceRef.current.disconnect();
       sourceRef.current = null;
     }
 
     const analyser = audioCtx.createAnalyser();
-    analyser.fftSize = 128;
+    analyser.fftSize = 128; // 64 bins
     analyserRef.current = analyser;
 
     try {
@@ -62,7 +52,7 @@ const AudioVisualizer: React.FC<AudioVisualizerProps> = ({ stream, isActive }) =
       return;
     }
 
-    const bufferLength = analyser.frequencyBinCount; // 64 bins
+    const bufferLength = analyser.frequencyBinCount;
     const dataArray = new Uint8Array(bufferLength);
     const canvasCtx = canvas.getContext('2d')!;
 
@@ -72,72 +62,52 @@ const AudioVisualizer: React.FC<AudioVisualizerProps> = ({ stream, isActive }) =
 
       const W = canvas.width;
       const H = canvas.height;
+      const centerX = W / 2;
+      const centerY = H / 2;
+      const baseRadius = 60; // Base size of the circle
+      
       canvasCtx.clearRect(0, 0, W, H);
 
-      // Create a gradient for the wave
-      const gradient = canvasCtx.createLinearGradient(0, 0, W, 0);
-      gradient.addColorStop(0, '#6366f1'); // Indigo
-      gradient.addColorStop(0.5, '#ec4899'); // Pink
-      gradient.addColorStop(1, '#8b5cf6'); // Violet
-
+      // Accent color #5B7FDB
+      canvasCtx.strokeStyle = '#5B7FDB';
+      canvasCtx.lineWidth = 3;
+      canvasCtx.shadowBlur = 15;
+      canvasCtx.shadowColor = 'rgba(91, 127, 219, 0.8)';
+      
       canvasCtx.beginPath();
-      canvasCtx.moveTo(0, H / 2);
-
-      const numPoints = 64;
-      const sliceWidth = W / numPoints;
-      let x = 0;
-
-      for (let i = 0; i < numPoints; i++) {
-        // Use a smoothed value
-        const val = dataArray[i] / 255.0;
-        const v = val * (H / 2) * 1.5; // Amplify slightly
+      
+      // Draw circular visualizer
+      const points = 64;
+      const angleStep = (Math.PI * 2) / points;
+      
+      for (let i = 0; i <= points; i++) {
+        // Wrap around at the end
+        const dataIdx = i === points ? 0 : i;
+        const val = dataArray[dataIdx] / 255.0;
         
-        // Alternate up and down to create a mirrored waveform effect, or just draw a filled wave
-        const y = (H / 2) - v;
-
+        // Boost the visual effect slightly
+        const spike = val * 50; 
+        const r = baseRadius + spike;
+        
+        const angle = i * angleStep - Math.PI / 2; // Start at top
+        const x = centerX + Math.cos(angle) * r;
+        const y = centerY + Math.sin(angle) * r;
+        
         if (i === 0) {
           canvasCtx.moveTo(x, y);
         } else {
-          // Quadratic curve for smoothness
-          const prevX = x - sliceWidth;
-          const prevVal = dataArray[i-1] / 255.0;
-          const prevY = (H / 2) - (prevVal * (H / 2) * 1.5);
-          const cpX = prevX + sliceWidth / 2;
-          const cpY = prevY;
-          canvasCtx.quadraticCurveTo(cpX, cpY, x, y);
-        }
-
-        x += sliceWidth;
-      }
-      
-      // Mirror the bottom half for a symmetrical wave
-      for (let i = numPoints - 1; i >= 0; i--) {
-        const val = dataArray[i] / 255.0;
-        const v = val * (H / 2) * 1.5;
-        const y = (H / 2) + v;
-        const prevX = (i + 1) * sliceWidth;
-        const currX = i * sliceWidth;
-        
-        if (i === numPoints - 1) {
-          canvasCtx.lineTo(currX, y);
-        } else {
-          const cpX = currX + sliceWidth / 2;
-          canvasCtx.lineTo(currX, y);
+          canvasCtx.lineTo(x, y);
         }
       }
-
-      canvasCtx.lineTo(0, H / 2);
       
-      canvasCtx.fillStyle = gradient;
-      canvasCtx.fill();
-      
-      // Add a glowing line on top
-      canvasCtx.shadowBlur = 10;
-      canvasCtx.shadowColor = '#ec4899';
-      canvasCtx.strokeStyle = 'white';
-      canvasCtx.lineWidth = 1;
+      canvasCtx.closePath();
       canvasCtx.stroke();
-      canvasCtx.shadowBlur = 0; // reset
+      
+      // Draw inner glowing circle
+      canvasCtx.beginPath();
+      canvasCtx.arc(centerX, centerY, baseRadius - 5, 0, Math.PI * 2);
+      canvasCtx.fillStyle = 'rgba(91, 127, 219, 0.15)';
+      canvasCtx.fill();
     };
 
     draw();
@@ -151,39 +121,33 @@ const AudioVisualizer: React.FC<AudioVisualizerProps> = ({ stream, isActive }) =
     };
   }, [stream, isActive]);
 
-  if (!isActive || !stream) return null;
-
   return (
-    <div
-      className="glass-panel w-full max-w-2xl mx-auto mt-4"
-      style={{
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        gap: '16px',
-        borderRadius: '24px',
-        padding: '16px 32px',
-        boxShadow: '0 0 40px rgba(99, 102, 241, 0.1)',
-        background: 'rgba(9, 9, 11, 0.6)',
-        border: '1px solid rgba(99, 102, 241, 0.2)',
-        backdropFilter: 'blur(12px)',
-      }}
-    >
-      {/* Pulsing mic indicator */}
-      <div style={{ position: 'relative', width: 12, height: 12, flexShrink: 0 }}>
-        <div style={{
-          width: 12, height: 12, borderRadius: '50%',
-          background: '#6366f1',
-          animation: 'pulse 1.2s ease-in-out infinite',
-          boxShadow: '0 0 15px #6366f1'
-        }} />
+    <div className="flex flex-col items-center justify-center py-6 w-full relative">
+      <div className="relative flex items-center justify-center w-64 h-64">
+        {/* Background ambient glow pulse when active */}
+        {isActive && (
+          <div className="absolute inset-0 rounded-full bg-accent/10 blur-3xl animate-pulse-slow" />
+        )}
+        
+        <canvas
+          ref={canvasRef}
+          width={256}
+          height={256}
+          className="absolute inset-0 z-10 w-full h-full"
+        />
+        
+        {/* Center Icon */}
+        <div className="relative z-20 flex items-center justify-center w-24 h-24 rounded-full bg-bg-surface border-2 border-accent shadow-[0_0_20px_rgba(91,127,219,0.3)]">
+          {isActive ? (
+            <Mic className="w-8 h-8 text-accent animate-pulse" />
+          ) : (
+            <MicOff className="w-8 h-8 text-text-muted" />
+          )}
+        </div>
       </div>
-      <canvas
-        ref={canvasRef}
-        width={320}
-        height={60}
-        style={{ display: 'block', width: '100%', maxWidth: '320px' }}
-      />
+      <p className="mt-4 text-xs font-bold tracking-widest text-accent uppercase">
+        {isActive ? 'OpsEcho Observer Active' : 'Observer Standby'}
+      </p>
     </div>
   );
 };
