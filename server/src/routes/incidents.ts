@@ -3,6 +3,7 @@ import { authenticate, AuthRequest } from "../middleware/auth";
 import prisma from "../lib/prisma";
 
 import { postToSlack, postResolutionToSlack } from "../services/slack";
+import { createJiraTicket } from "../services/jira";
 import crypto from "crypto";
 import { processTranscript } from "../services/aiProcessor";
 import { generateIncidentSummary } from "../services/gemini";
@@ -237,6 +238,52 @@ router.post("/:id/chat", authenticate, async (req: AuthRequest, res) => {
   }
 });
 
+// Edit a chat message
+router.put("/:id/chat/:chatId", authenticate, async (req: AuthRequest, res) => {
+  const { id, chatId } = req.params;
+  const { text } = req.body;
+  const userId = req.user?.id;
+
+  if (!userId) return res.status(401).json({ error: "Unauthorized" });
+  if (!text || !text.trim()) return res.status(400).json({ error: "Empty message" });
+
+  try {
+    const transcript = await prisma.transcript.findUnique({ where: { id: chatId } });
+    if (!transcript) return res.status(404).json({ error: "Message not found" });
+    if (transcript.userId !== userId) return res.status(403).json({ error: "Forbidden" });
+
+    const updated = await prisma.transcript.update({
+      where: { id: chatId },
+      data: { text: text.trim() }
+    });
+
+    res.json(updated);
+  } catch (error) {
+    console.error("Edit message error:", error);
+    res.status(500).json({ error: "Failed to edit message" });
+  }
+});
+
+// Delete a chat message
+router.delete("/:id/chat/:chatId", authenticate, async (req: AuthRequest, res) => {
+  const { id, chatId } = req.params;
+  const userId = req.user?.id;
+
+  if (!userId) return res.status(401).json({ error: "Unauthorized" });
+
+  try {
+    const transcript = await prisma.transcript.findUnique({ where: { id: chatId } });
+    if (!transcript) return res.status(404).json({ error: "Message not found" });
+    if (transcript.userId !== userId) return res.status(403).json({ error: "Forbidden" });
+
+    await prisma.transcript.delete({ where: { id: chatId } });
+    res.json({ success: true });
+  } catch (error) {
+    console.error("Delete message error:", error);
+    res.status(500).json({ error: "Failed to delete message" });
+  }
+});
+
 // Update action status (e.g., confirm a critical action)
 router.patch("/:id/actions/:actionId", authenticate, async (req: AuthRequest, res) => {
   const { id, actionId } = req.params;
@@ -332,8 +379,9 @@ router.post("/:id/resolve", authenticate, async (req: AuthRequest, res) => {
       },
     });
 
-    // 4. Send to Slack if integration exists
+    // 4. Send to Slack and Jira if integrations exist
     await postResolutionToSlack(userId, id, summary);
+    await createJiraTicket(userId, id, summary);
 
     // 5. Broadcast the final resolved state
     const io = req.app.get("io");

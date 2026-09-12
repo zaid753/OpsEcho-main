@@ -136,7 +136,7 @@ export const generateIncidentSummary = async (incident: any) => {
 
   try {
     const response = await ai.models.generateContent({
-      model: "gemini-3.6-flash",
+      model: "gemini-2.5-flash",
       contents: prompt,
     });
     
