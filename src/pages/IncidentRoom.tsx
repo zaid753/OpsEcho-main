@@ -456,9 +456,9 @@ export default function IncidentRoom() {
     try {
       await client.post(`/incidents/${id}/share`);
       alert("Successfully shared the report to your connected integrations!");
-    } catch (err) {
+    } catch (err: any) {
       console.error("Failed to share report", err);
-      alert("Failed to share report to integrations.");
+      alert(`Failed to share report: ${err?.response?.data?.error || err.message}`);
     } finally {
       setIsSharingReport(false);
     }

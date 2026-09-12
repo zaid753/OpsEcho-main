@@ -112,7 +112,7 @@ router.get("/jira/authorize", (req, res) => {
   const state = encodeURIComponent(JSON.stringify({ userId }));
   
   // Jira OAuth 2.0 authorization URL
-  const jiraUrl = `https://auth.atlassian.com/authorize?audience=api.atlassian.com&client_id=${clientId}&scope=read:jira-work write:jira-work&redirect_uri=${redirectUri}&state=${state}&response_type=code&prompt=consent`;
+  const jiraUrl = `https://auth.atlassian.com/authorize?audience=api.atlassian.com&client_id=${clientId}&scope=read:jira-work write:jira-work offline_access&redirect_uri=${redirectUri}&state=${state}&response_type=code&prompt=consent`;
   
   res.redirect(jiraUrl);
 });

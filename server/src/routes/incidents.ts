@@ -480,9 +480,9 @@ router.post("/:id/share", authenticate, async (req: AuthRequest, res) => {
     await createJiraTicket(userId, id, incident.summary);
 
     res.json({ success: true });
-  } catch (error) {
+  } catch (error: any) {
     console.error("Share error:", error);
-    res.status(500).json({ error: "Failed to share report to integrations" });
+    res.status(500).json({ error: error.message || "Failed to share report to integrations" });
   }
 });
 
