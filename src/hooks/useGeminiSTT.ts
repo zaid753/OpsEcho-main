@@ -16,7 +16,7 @@ export const useGeminiSTT = (
   isEnabled: boolean,
   agoraTrack: MediaStreamTrack | null,   // kept for interface compatibility
   socket: any,
-  onFinalTranscriptPosted?: () => void
+  onFinalTranscriptPosted?: (text: string, tempId: string) => void
 ) => {
   const [isListening, setIsListening] = useState(false);
   const [transcript, setTranscript] = useState('');
@@ -29,8 +29,16 @@ export const useGeminiSTT = (
   // Post a finalized transcript to the backend for AI analysis
   const postTranscript = useCallback(async (text: string) => {
     if (!incidentId || !text.trim()) return;
+    
+    const token = localStorage.getItem('token');
+    const tempId = 'optimistic-' + Date.now();
+    
+    // 1. Optimistic update (if callback provided)
+    if (onFinalTranscriptPosted) {
+      onFinalTranscriptPosted(text.trim(), tempId);
+    }
+    
     try {
-      const token = localStorage.getItem('token');
       const response = await fetch(`/api/incidents/${incidentId}/chat`, {
         method: 'POST',
         headers: {
@@ -43,9 +51,7 @@ export const useGeminiSTT = (
         console.error('[STT] POST failed:', response.status, await response.text());
       } else {
         console.log('[STT] Voice transcript sent for AI analysis:', text.trim());
-        if (onFinalTranscriptPosted) {
-          onFinalTranscriptPosted();
-        }
+        // Silent refresh is handled by the 3s polling, we already optimistically updated
       }
     } catch (err) {
       console.error('[STT] Failed to POST transcript:', err);

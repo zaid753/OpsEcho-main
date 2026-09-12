@@ -249,7 +249,25 @@ export default function IncidentRoom() {
     isVoiceConnected && !isMuted,
     localMediaTrack,
     socket,
-    fetchIncidentSilent
+    (text: string, tempId: string) => {
+      // Optimistic update for voice
+      setIncident((prev: any) => {
+        if (!prev) return prev;
+        const newTranscript = {
+          id: tempId,
+          incidentId: id,
+          userName: user?.name || 'You',
+          userId: user?.id,
+          text,
+          timestamp: new Date().toISOString()
+        };
+        return {
+          ...prev,
+          transcripts: [newTranscript, ...(prev.transcripts || [])]
+        };
+      });
+      fetchIncidentSilent();
+    }
   );
   const isSpeaking = localVolume > 5;
   
@@ -338,6 +356,12 @@ export default function IncidentRoom() {
     // Join the incident room
     socket.emit("join-incident", id);
     
+    // Auto-rejoin on disconnect/reconnect (e.g. server restart)
+    const handleReconnect = () => {
+      socket.emit("join-incident", id);
+    };
+    socket.on("connect", handleReconnect);
+    
     const handleNewTranscript = (newTranscript: any) => {
       setIncident((prev: any) => {
         if (!prev) return prev;
@@ -374,6 +398,7 @@ export default function IncidentRoom() {
 
     return () => {
       socket.emit("leave-incident", id);
+      socket.off("connect", handleReconnect);
       socket.off("TRANSCRIPT_NEW", handleNewTranscript);
       socket.off("incident:updated", handleIncidentUpdated);
       socket.off("TRANSCRIPT_PARTIAL", handlePartial);
@@ -407,6 +432,7 @@ export default function IncidentRoom() {
   }, [id, fetchIncidentSilent]);
 
   const [isResolving, setIsResolving] = useState(false);
+  const [isGeneratingLiveSummary, setIsGeneratingLiveSummary] = useState(false);
 
   const handleResolve = async () => {
     if (!window.confirm("Are you sure you want to resolve this incident? This will close the voice room.")) return;
@@ -418,6 +444,18 @@ export default function IncidentRoom() {
     } catch (err) {
       console.error("Failed to resolve incident", err);
       setIsResolving(false);
+    }
+  };
+
+  const handleGenerateLiveSummary = async () => {
+    setIsGeneratingLiveSummary(true);
+    try {
+      await client.post(`/incidents/${id}/summary`);
+      // UI updates via socket incident:updated automatically
+    } catch (err) {
+      console.error("Failed to generate live summary", err);
+    } finally {
+      setIsGeneratingLiveSummary(false);
     }
   };
 
@@ -922,6 +960,11 @@ export default function IncidentRoom() {
                           <div className="prose prose-sm dark:prose-invert max-w-none">
                             {incident.summary ? (
                               <ReactMarkdown>{incident.summary}</ReactMarkdown>
+                            ) : isGeneratingLiveSummary ? (
+                              <div className="flex flex-col items-center justify-center h-full text-text-muted gap-4 mt-20">
+                                <div className="w-8 h-8 border-2 border-zinc-300 dark:border-border-subtle border-t-zinc-600 dark:border-t-white/60 rounded-full animate-spin" />
+                                <p>Generating live AI summary...</p>
+                              </div>
                             ) : incident.status === "RESOLVED" ? (
                               <div className="flex flex-col items-center justify-center h-full text-text-muted gap-4 mt-20">
                                 <div className="w-8 h-8 border-2 border-zinc-300 dark:border-border-subtle border-t-zinc-600 dark:border-t-white/60 rounded-full animate-spin" />
@@ -931,7 +974,14 @@ export default function IncidentRoom() {
                               <div className="flex flex-col items-center justify-center h-full text-text-muted gap-4 mt-20">
                                 <FileText className="w-12 h-12 text-zinc-400 dark:text-zinc-600 mb-2" />
                                 <h3 className="text-lg font-medium text-text-primary">No Summary Available</h3>
-                                <p className="text-center max-w-sm">Resolve the incident to automatically generate an AI post-mortem summary, or click "Edit Report" to write it manually.</p>
+                                <p className="text-center max-w-sm mb-4">Resolve the incident to automatically generate an AI post-mortem summary, or generate a live report now.</p>
+                                <button
+                                  onClick={handleGenerateLiveSummary}
+                                  disabled={isGeneratingLiveSummary}
+                                  className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white text-sm font-bold rounded-lg transition-colors shadow-lg shadow-blue-500/20"
+                                >
+                                  Generate Live Report
+                                </button>
                               </div>
                             )}
                           </div>

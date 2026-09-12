@@ -4,7 +4,11 @@ import AgoraRTC, {
   IMicrophoneAudioTrack, 
   IAgoraRTCRemoteUser 
 } from 'agora-rtc-sdk-ng';
+import { AIDenoiserExtension } from 'agora-extension-ai-denoiser';
 import client from '../api/client';
+
+const denoiser = new AIDenoiserExtension({ assetsPath: '/agora-denoiser' });
+AgoraRTC.registerExtensions([denoiser]);
 
 export const useAgoraRoom = (incidentId: string | undefined) => {
   const [localAudioTrack, setLocalAudioTrack] = useState<IMicrophoneAudioTrack | null>(null);
@@ -114,6 +118,19 @@ export const useAgoraRoom = (incidentId: string | undefined) => {
       
       // 5. Create and Publish Local Audio
       const audioTrack = await AgoraRTC.createMicrophoneAudioTrack({ AEC: true, ANS: true });
+      
+      try {
+        if (denoiser.checkCompatibility()) {
+          const processor = denoiser.createProcessor();
+          audioTrack.pipe(processor).pipe(audioTrack.processorDestination);
+          await processor.enable();
+        } else {
+          console.warn('AI Noise Suppression not supported in this browser — continuing without it.');
+        }
+      } catch (denoiserErr) {
+        console.warn('AI Noise Suppression failed to enable — continuing without it.', denoiserErr);
+      }
+      
       localAudioTrackRef.current = audioTrack;
       setLocalAudioTrack(audioTrack);
       // Expose the raw MediaStreamTrack so Gemini STT can reuse the AEC-processed stream

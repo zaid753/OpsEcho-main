@@ -211,6 +211,19 @@ router.post("/:id/chat", authenticate, async (req: AuthRequest, res) => {
   if (!userId) return res.status(401).json({ error: "Unauthorized" });
   if (!text || !text.trim()) return res.status(400).json({ error: "Empty message" });
 
+  const BACKCHANNEL_PATTERN = /^(uh+|um+|hm+|mm+|yeah|yep|yup|ok(ay)?|right|sure|got it|i see|mhm+|uh-huh)[.,!?]*$/i;
+  function isPureBackchannel(msgText: string): boolean {
+    const trimmed = msgText.trim();
+    const words = trimmed.split(/\s+/);
+    if (words.length > 3) return false;
+    return words.every(w => BACKCHANNEL_PATTERN.test(w));
+  }
+
+  if (source === 'voice' && isPureBackchannel(text)) {
+    console.log(`[Backchannel Filter] Ignored purely filler text: "${text}"`);
+    return res.json({ ignored: true, reason: 'backchannel' });
+  }
+
   try {
     // Verify participant
     const participant = await prisma.incidentParticipant.findUnique({
@@ -389,8 +402,63 @@ router.post("/:id/resolve", authenticate, async (req: AuthRequest, res) => {
 
     res.json(incident);
   } catch (error) {
-    console.error("Resolve incident error:", error);
+    console.error("Resolve error:", error);
     res.status(500).json({ error: "Failed to resolve incident" });
+  }
+});
+
+// Generate Live Summary (Manual trigger)
+router.post("/:id/summary", authenticate, async (req: AuthRequest, res) => {
+  const { id } = req.params;
+  const userId = req.user?.id;
+
+  try {
+    const currentIncident = await prisma.incident.findUnique({
+      where: { id },
+      include: {
+        actions: { include: { owner: { select: { name: true } } } },
+        facts: true,
+        hypotheses: true,
+        decisions: true,
+        conflicts: true,
+        timeline: { orderBy: { timestamp: "asc" } },
+        transcripts: { orderBy: { timestamp: "desc" }, take: 100 }
+      },
+    });
+
+    if (!currentIncident) return res.status(404).json({ error: "Incident not found" });
+
+    // Generate summary
+    const summary = await generateIncidentSummary(currentIncident);
+
+    // Persist summary
+    const incident = await prisma.incident.update({
+      where: { id },
+      data: { summary },
+      include: {
+        createdBy: { select: { name: true, role: true } },
+        participants: {
+          include: { user: { select: { id: true, name: true, role: true } } },
+        },
+        actions: { include: { owner: { select: { name: true } } } },
+        facts: true,
+        hypotheses: true,
+        decisions: true,
+        conflicts: true,
+        transcripts: { orderBy: { timestamp: "desc" }, take: 50 },
+        timeline: { orderBy: { timestamp: "asc" } },
+      }
+    });
+
+    const io = req.app.get("io");
+    if (io) {
+      io.to(`incident:${id}`).emit("incident:updated", incident);
+    }
+
+    res.json(incident);
+  } catch (err) {
+    console.error("Failed to generate summary", err);
+    res.status(500).json({ error: "Failed to generate summary" });
   }
 });
 

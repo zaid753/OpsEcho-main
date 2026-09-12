@@ -39,6 +39,7 @@ export const analyzeTranscript = async (transcript: string, context: any) => {
     5. Detect CONFLICTS if two pieces of information technically contradict each other.
     6. Identify RISKS using formal SRE terminology.
     7. If the input is chatter, greetings, or non-incident related, return empty arrays for everything.
+    8. If the statement is purely a filler word, acknowledgment, or backchannel expression (e.g. "hmm", "yeah", "okay", "right", "got it") with no new factual, decision, or action content, classify it as NONE and do not extract anything from it.
 
     ═══════════ CONTRADICTION & DEMOTION RULE ═══════════
     This is the most important rule:
