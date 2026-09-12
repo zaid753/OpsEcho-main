@@ -31,7 +31,7 @@ router.get("/slack/authorize", (req, res) => {
     return res.status(400).json({ error: "Missing userId" });
   }
   
-  const clientId = process.env.SLACK_CLIENT_ID;
+  const clientId = process.env.SLACK_CLIENT_ID?.trim();
   const redirectUri = encodeURIComponent(`${process.env.CLIENT_ORIGIN || 'http://localhost:3000'}/api/integrations/slack/callback`);
   
   // Pass userId in state to associate the token later
@@ -59,8 +59,8 @@ router.get("/slack/callback", async (req, res) => {
     
     const response = await axios.post('https://slack.com/api/oauth.v2.access', null, {
       params: {
-        client_id: process.env.SLACK_CLIENT_ID,
-        client_secret: process.env.SLACK_CLIENT_SECRET,
+        client_id: process.env.SLACK_CLIENT_ID?.trim(),
+        client_secret: process.env.SLACK_CLIENT_SECRET?.trim(),
         code,
         redirect_uri: `${process.env.CLIENT_ORIGIN || 'http://localhost:3000'}/api/integrations/slack/callback`
       }
@@ -106,7 +106,7 @@ router.get("/jira/authorize", (req, res) => {
     return res.status(400).json({ error: "Missing userId" });
   }
   
-  const clientId = process.env.JIRA_CLIENT_ID;
+  const clientId = process.env.JIRA_CLIENT_ID?.trim();
   const redirectUri = encodeURIComponent(`${process.env.CLIENT_ORIGIN || 'http://localhost:3000'}/api/integrations/jira/callback`);
   
   const state = encodeURIComponent(JSON.stringify({ userId }));
@@ -134,8 +134,8 @@ router.get("/jira/callback", async (req, res) => {
     
     const response = await axios.post('https://auth.atlassian.com/oauth/token', {
       grant_type: 'authorization_code',
-      client_id: process.env.JIRA_CLIENT_ID,
-      client_secret: process.env.JIRA_CLIENT_SECRET,
+      client_id: process.env.JIRA_CLIENT_ID?.trim(),
+      client_secret: process.env.JIRA_CLIENT_SECRET?.trim(),
       code,
       redirect_uri: `${process.env.CLIENT_ORIGIN || 'http://localhost:3000'}/api/integrations/jira/callback`
     });

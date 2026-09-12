@@ -430,8 +430,7 @@ export default function IncidentRoom() {
     setIsResolving(true);
     try {
       await client.post(`/incidents/${id}/resolve`);
-      // UI updates via socket incident:updated automatically
-      // Removed redirect so user can view/edit the post-mortem summary
+      await fetchIncidentSilent();
     } catch (err) {
       console.error("Failed to resolve incident", err);
       setIsResolving(false);
@@ -442,11 +441,26 @@ export default function IncidentRoom() {
     setIsGeneratingLiveSummary(true);
     try {
       await client.post(`/incidents/${id}/summary`);
-      // UI updates via socket incident:updated automatically
+      await fetchIncidentSilent();
     } catch (err) {
       console.error("Failed to generate live summary", err);
     } finally {
       setIsGeneratingLiveSummary(false);
+    }
+  };
+
+  const [isSharingReport, setIsSharingReport] = React.useState(false);
+
+  const handleShareReport = async () => {
+    setIsSharingReport(true);
+    try {
+      await client.post(`/incidents/${id}/share`);
+      alert("Successfully shared the report to your connected integrations!");
+    } catch (err) {
+      console.error("Failed to share report", err);
+      alert("Failed to share report to integrations.");
+    } finally {
+      setIsSharingReport(false);
     }
   };
 
@@ -455,6 +469,7 @@ export default function IncidentRoom() {
     try {
       await client.patch(`/incidents/${id}/summary`, { summary: editedSummary });
       setIsEditingSummary(false);
+      await fetchIncidentSilent();
     } catch (err) {
       console.error("Failed to update summary", err);
     } finally {
@@ -928,6 +943,18 @@ export default function IncidentRoom() {
                         ) : (
                           <div className="flex items-center gap-2">
                             <ExportPDFButton incident={incident} />
+                            <button
+                              onClick={handleShareReport}
+                              disabled={isSharingReport}
+                              className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-500/10 hover:bg-blue-500/20 text-blue-600 dark:text-blue-400 text-xs font-bold rounded-lg transition-colors disabled:opacity-50"
+                            >
+                              {isSharingReport ? (
+                                <div className="w-3 h-3 border-2 border-blue-400 border-t-transparent rounded-full animate-spin" />
+                              ) : (
+                                <Share2 className="w-3 h-3" />
+                              )}
+                              Share
+                            </button>
                             <button
                               onClick={() => setIsEditingSummary(true)}
                               className="flex items-center gap-1.5 px-3 py-1.5 bg-bg-surface hover:bg-bg-surface dark:bg-bg-surface/5 dark:hover:bg-bg-surface/10 text-text-primary dark:text-zinc-300 text-xs font-bold rounded-lg transition-colors"

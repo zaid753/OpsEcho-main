@@ -451,14 +451,38 @@ router.post("/:id/summary", authenticate, async (req: AuthRequest, res) => {
     });
 
     const io = req.app.get("io");
-    if (io) {
-      io.to(`incident:${id}`).emit("incident:updated", incident);
-    }
+    io?.to(`incident:${id}`).emit("incident:updated", incident);
 
     res.json(incident);
-  } catch (err) {
-    console.error("Failed to generate summary", err);
-    res.status(500).json({ error: "Failed to generate summary" });
+  } catch (error) {
+    console.error("Live summary error:", error);
+    res.status(500).json({ error: "Failed to generate live summary" });
+  }
+});
+
+// Share Report Manually to Integrations
+router.post("/:id/share", authenticate, async (req: AuthRequest, res) => {
+  const { id } = req.params;
+  const userId = req.user?.id;
+  
+  if (!userId) return res.status(401).json({ error: "Unauthorized" });
+
+  try {
+    const incident = await prisma.incident.findUnique({
+      where: { id }
+    });
+
+    if (!incident) return res.status(404).json({ error: "Incident not found" });
+    if (!incident.summary) return res.status(400).json({ error: "No summary exists to share" });
+
+    // Send to Slack and Jira
+    await postResolutionToSlack(userId, id, incident.summary);
+    await createJiraTicket(userId, id, incident.summary);
+
+    res.json({ success: true });
+  } catch (error) {
+    console.error("Share error:", error);
+    res.status(500).json({ error: "Failed to share report to integrations" });
   }
 });
 
