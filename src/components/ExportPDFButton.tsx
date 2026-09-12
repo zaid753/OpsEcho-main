@@ -100,9 +100,22 @@ export default function ExportPDFButton({ incident }: { incident: any }) {
           <h2 style={{ fontSize: '22px', fontWeight: '700', marginBottom: '16px', color: '#0f172a', borderBottom: '1px solid #e2e8f0', paddingBottom: '8px' }}>
             Executive Summary
           </h2>
-          <div className="prose prose-sm max-w-none text-slate-700" style={{ fontSize: '15px', lineHeight: '1.7', color: '#334155' }}>
+          <div style={{ fontSize: '15px', lineHeight: '1.7', color: '#334155' }}>
             {incident.summary ? (
-              <ReactMarkdown>{incident.summary}</ReactMarkdown>
+              <ReactMarkdown 
+                components={{
+                  h1: ({node, ...props}) => <h3 style={{ fontSize: '18px', fontWeight: '700', color: '#1e293b', marginTop: '24px', marginBottom: '12px' }} {...props} />,
+                  h2: ({node, ...props}) => <h3 style={{ fontSize: '16px', fontWeight: '700', color: '#1e293b', marginTop: '20px', marginBottom: '10px' }} {...props} />,
+                  h3: ({node, ...props}) => <h4 style={{ fontSize: '15px', fontWeight: '600', color: '#1e293b', marginTop: '16px', marginBottom: '8px' }} {...props} />,
+                  p: ({node, ...props}) => <p style={{ marginBottom: '16px', color: '#334155' }} {...props} />,
+                  ul: ({node, ...props}) => <ul style={{ paddingLeft: '24px', marginBottom: '16px', listStyleType: 'disc' }} {...props} />,
+                  ol: ({node, ...props}) => <ol style={{ paddingLeft: '24px', marginBottom: '16px', listStyleType: 'decimal' }} {...props} />,
+                  li: ({node, ...props}) => <li style={{ marginBottom: '8px', color: '#475569' }} {...props} />,
+                  strong: ({node, ...props}) => <strong style={{ fontWeight: '700', color: '#0f172a' }} {...props} />
+                }}
+              >
+                {incident.summary}
+              </ReactMarkdown>
             ) : (
               <p style={{ fontStyle: 'italic', color: '#94a3b8' }}>No summary provided.</p>
             )}
